@@ -6,12 +6,13 @@ from config import AI_MODEL
 # Configuración del modelo
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
+
 def analizar_historia_clinica(texto):
 
     modelo = genai.GenerativeModel(
-        model_name=AI_MODEL,
+        AI_MODEL,
         generation_config={
-            "temperature": 0.1,   # baja creatividad → más precisión clínica
+            "temperature": 0.1,
             "top_p": 0.9,
             "max_output_tokens": 2048
         }
@@ -27,7 +28,7 @@ INSTRUCCIONES:
 - Devuelve ÚNICAMENTE JSON válido.
 - No agregues texto antes ni después del JSON.
 
-Estructura esperada:
+Estructura:
 
 {{
   "paciente": {{
@@ -60,12 +61,11 @@ Texto clínico:
     try:
         response = modelo.generate_content(prompt)
 
-        # Intentar convertir a JSON limpio
         contenido = response.text.strip()
 
-        # Si Gemini devuelve markdown ```json ... ```
+        # Limpiar markdown si lo agrega
         if contenido.startswith("```"):
-            contenido = contenido.split("```")[1]
+            contenido = contenido.replace("```json", "").replace("```", "").strip()
 
         datos = json.loads(contenido)
 
