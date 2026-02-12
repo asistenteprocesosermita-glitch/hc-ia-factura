@@ -1,6 +1,76 @@
-# Modelo de IA utilizado
-AI_MODEL = "gemini-2.5-pro"
+# config.py
 
-# Tamaño máximo de texto por bloque para enviar a la IA
-# (Evita errores por límite de tokens)
+# ======================================================
+# PATRONES REGEX PARA IDENTIFICAR EVENTOS FACTURABLES
+# ======================================================
 
+# ---------- DATOS DEL PACIENTE ----------
+PAT_CC = r'(?:CC|C[ÉE]DULA|IDENTIFICACI[ÓO]N)[:\s]*([0-9]{6,11})'
+PAT_NOMBRE = r'(?:NOMBRE|PACIENTE)[:\s]*([A-ZÁÉÍÓÚÑ\s]+?)(?=\s{2,}|\d{2}/\d{2}/\d{4}|$)'
+PAT_FECHA_NAC = r'(?:FECHA DE NACIMIENTO|FEC\. NACIMIENTO|NACIMIENTO)[:\s]*(\d{2}/\d{2}/\d{4})'
+PAT_EDAD = r'EDAD ACTUAL[:\s]*(\d+)\s*A[ÑN]OS'
+PAT_SEXO = r'SEXO[:\s]*([MF])'
+PAT_EPS = r'EMPRESA[:\s]*([A-ZÁÉÍÓÚÑ\s\.]+?)(?=\s{2,}|AFILIADO|$)'
+PAT_AFILIADO = r'AFILIADO[:\s]*([A-ZÁÉÍÓÚÑ\s]+?)(?=\s{2,}|MUNICIPIO|$)'
+PAT_RESPONSABLE = r'RESPONSABLE[:\s]*([A-ZÁÉÍÓÚÑ\s]+?)(?=\s{2,}|TEL[ÉE]FONO|$)'
+PAT_TEL = r'TEL[ÉE]FONO[:\s]*([0-9]+)'
+
+# ---------- SERVICIOS / ESTANCIAS ----------
+PAT_SERVICIO = r'(?:SEDE DE ATENCI[ÓO]N|SERVICIO)[:\s]*(.*?)(?=\s{2,}|FOLIO|FECHA)'
+PAT_FECHA_FOLIO = r'FECHA[:\s]*(\d{2}/\d{2}/\d{4})\s*(\d{2}:\d{2}:\d{2})?'
+PAT_INGRESO = r'INGRESA.*?SERVICIO DE (.*?)(?=\s{2,}|EN COMPA[ÑN]ÍA|$)'
+PAT_TRASLADO = r'TRASLAD[AO].*?SERVICIO DE (.*?)(?=\s{2,}|EN COMPA[ÑN]ÍA|$)'
+PAT_EGRESO = r'(?:ENTREGO|EGRESO|ALTA).*?SERVICIO DE (.*?)(?=\s{2,}|EN COMPA[ÑN]ÍA|$)'
+
+# ---------- PROCEDIMIENTOS ----------
+PAT_PROCEDIMIENTO = r'(?:PROCEDIMIENTO|CIRUG[ÍI]A|BIOPSIA|COLOCACI[ÓO]N|RETIRO|ASPIRADO|MIELOGRAMA|CITOMETR[ÍI]A|CARIOTIPO|INTUBACI[ÓO]N|EXTUBACI[ÓO]N).*?(?=\n|\.)'
+
+# ---------- FÓRMULA MÉDICA / ÓRDENES ESTRUCTURADAS ----------
+PAT_FM_CANT = r'^(\d+\.\d{2})\s+([A-ZÁÉÍÓÚÑ\s]+?)\s+([\d,]+)\s*([A-Z]+)?'   # Captura cantidad, descripción, dosis, vía
+PAT_FM_TABLA = r'(?:Cantidad|Descripción)(.*?)(?=\n\n|FORMULA MEDICA ESTANDAR|ORDENES DE LABORATORIO|$)'
+PAT_ORDEN_LAB = r'^(\d+)\s+([A-ZÁÉÍÓÚÑ\s]+?)\s*(?:Interpretado|Cancelado|Pendiente)?$'
+
+# ---------- MEDICAMENTOS ADMINISTRADOS (NOTAS ENFERMERÍA) ----------
+PAT_ADMIN_MED = r'(?:JEFE EN TURNO ADMINISTRA|RECIBE TRATAMIENTO|SE COLOCA|SE INICIA)\s+([A-ZÁÉÍÓÚÑ0-9\s]+?)\s+(\d+[,\d]*)\s*(GR|MG|MCG|AMP|FRASCO|TAB|CAP|IV|VO|SC|IM)?'
+
+# ---------- TRANSFUSIONES ----------
+PAT_TRANSFUSION = r'(?:TRANSFUSI[ÓO]N|UNIDAD(?:ES)? DE GLOBULOS ROJOS|UNIDAD(?:ES)? DE PLAQUETAS|AF[ÉE]RESIS).*?(?:NUMERO DE BOLSA|SELLO DE CALIDAD)'
+
+# ---------- LABORATORIOS E IMÁGENES (ÓRDENES) ----------
+PAT_IMAGEN = r'(RADIOGRAF[ÍI]A|ECOGRAF[ÍI]A|TOMOGRAF[ÍI]A|ECOCARDIOGRAMA|GAMMAGRAF[ÍI]A).*?'
+PAT_LABORATORIO = r'(?:HEMOGRAMA|IONOGRAMA|CREATININA|BUN|UREA|TP|TTP|INR|FIBRIN[ÓO]GENO|GASES|LACTATO|BILIRRUBINAS|TRANSAMINASAS|CALCIO|MAGNESIO|SODIO|POTASIO|CLORO|LDH|FERRITINA|TRANSFERRINA|VITAMINA B12|ACIDO F[ÓO]LICO|HAPTOGLOBINA|ANAS|ANTICUERPOS|HEMOCULTIVO|UROCULTIVO|RETROCULTIVO|COOMBS|ANTIGENO|CARIOTIPO|CITOMETRIA|MIELOGRAMA)'
+
+# ---------- CANCELACIONES ----------
+PAT_CANCELADO = r'(?:Motivo Cancelacion|Cancelado|Usuario que Cancela|Fecha de Cancelaci[óo]n)'
+
+# ---------- LISTAS MAESTRAS ----------
+MEDICAMENTOS_QUIMIO = ['CITARABINA', 'IDARRUBICINA', 'FILGRASTIM', 'TAMOXIFENO']
+ANTIBIOTICOS_RESERVA = ['VANCOMICINA', 'MEROPENEM', 'PIPERACILINA', 'TAZOBACTAM']
+ANTIFUNGICOS = ['FLUCONAZOL']
+ANTIVIRALES = ['ACICLOVIR']
+SEDACION = ['FENTANILO', 'MIDAZOLAM', 'ROCURONIO', 'KETAMINA']
+VASOPRESORES = ['NOREPINEFRINA', 'NORADRENALINA']
+OTROS = ['OMEPRAZOL', 'TRIMEBUTINA', 'LACTULOSA', 'FUROSEMIDA', 'ACIDO TRANEXAMICO', 'LORATADINA', 'HIDROCORTISONA']
+
+# Mapeo de vías a códigos de administración (opcional)
+VIA_CODIGO = {
+    'IV': '1',
+    'INTRAVENOSO': '1',
+    'VO': '2',
+    'ORAL': '2',
+    'SC': '3',
+    'SUBCUTANEA': '3',
+    'IM': '4'
+}
+
+# Códigos CUPS comunes (simplificado - se puede expandir)
+CUPS = {
+    'BIOPSIA POR ASPIRACION DE MEDULA OSEA': '88304',
+    'MIELOGRAMA': '88305',
+    'CITOMETRIA DE FLUJO': '88184',
+    'CARIOTIPO': '88239',
+    'CATETER VENOSO CENTRAL': '36010',
+    'INTUBACION OROTRAQUEAL': '31500',
+    'EXTUBACION': '31502',
+    # ... etc.
+}
