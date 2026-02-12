@@ -1,4 +1,6 @@
 streamlit
-pymupdf
+PyPDF2
+pdf2image
+pytesseract
 Pillow
-google-generativeai
+opencv-python-headless   # necesario para manejo de imágenes (pdf2image)
