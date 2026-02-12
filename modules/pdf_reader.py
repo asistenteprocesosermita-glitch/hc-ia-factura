@@ -1,27 +1,33 @@
 import fitz  # PyMuPDF
 
+
 def extraer_texto_pdf(ruta_pdf):
     """
     Extrae texto de un PDF usando PyMuPDF.
-    Si no puede leer alguna página, la salta sin romper el proceso.
+    - Si una página falla, la omite.
+    - Elimina páginas completamente vacías.
+    - Devuelve texto limpio.
     """
 
     texto_total = ""
 
     try:
-        documento = fitz.open(ruta_pdf)
+        with fitz.open(ruta_pdf) as documento:
 
-        for num_pagina in range(len(documento)):
-            try:
-                pagina = documento.load_page(num_pagina)
-                texto_total += pagina.get_text("text") + "\n"
-            except Exception:
-                # Si una página falla, continúa con las demás
-                continue
+            for num_pagina in range(len(documento)):
+                try:
+                    pagina = documento.load_page(num_pagina)
+                    texto = pagina.get_text("text")
 
-        documento.close()
+                    # Solo agregar si realmente tiene contenido
+                    if texto and texto.strip():
+                        texto_total += texto.strip() + "\n\n"
+
+                except Exception:
+                    # Continúa si una página falla
+                    continue
 
     except Exception as e:
         return f"Error al leer PDF: {str(e)}"
 
-    return texto_total
+    return texto_total.strip()
