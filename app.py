@@ -40,7 +40,7 @@ if uploaded_file:
 
         # Si el PDF es escaneado
         if not texto or len(texto.strip()) < 100:
-            st.warning("Documento escaneado detectado. Aplicando OCR con Gemini 2.5 Flash...")
+            st.warning("Documento escaneado detectado. Aplicando OCR con Gemini 2.5 Pro...")
             texto = extraer_texto_ocr(filepath)
 
         if not texto:
