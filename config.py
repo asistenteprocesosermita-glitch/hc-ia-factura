@@ -1,5 +1,5 @@
 # Modelo de IA utilizado
-AI_MODEL = "gemini-2.5-flash"
+AI_MODEL = "Gemini 2.5 Pro"
 
 # Tamaño máximo de texto por bloque para enviar a la IA
 # (Evita errores por límite de tokens)
